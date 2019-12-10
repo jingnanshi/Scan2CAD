@@ -93,8 +93,9 @@ if __name__ == '__main__':
         filename_json = "./example_annotation.json"
 
     for r in JSONHelper.read(filename_json):
+        
         id_scan = r["id_scan"]
-        if id_scan != "scene0470_00":
+        if id_scan != "scene0001_00":
             continue
 
         outdir = os.path.abspath(opt.out + "/" + id_scan)
