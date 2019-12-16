@@ -81,6 +81,40 @@ std::vector<float> get_random_voxel_point(std::string filename_scan) {
   return result;
 }
 
+/**
+ * Helper function to check whether a provided keypoint is close to
+ * the surface of the provided voxelized CAD model.
+ *
+ */
+bool close_to_surface(py::array_t<float> &kps, std::string filename_scan) {
+  // Assertion checks
+  assert(kps.ndim() == 2 && "Keypoints array must be 2D array!");
+  assert(kps.shape(0) == 3 && "Keypoints array must have n_cols = 3!");
+
+  // Load vox file
+  Vox vox = load_vox(filename_scan);
+
+  // Convert keypoints to Eigen matrix
+  const int n_kps = kps.shape(1);
+  Eigen::MatrixXf kps1 = Eigen::Map<Eigen::MatrixXf>(kps.mutable_data(), 3, n_kps);
+
+  // Check closeness for all keypoints given
+  for (int i = 0; i < n_kps; ++i) {
+    Eigen::Vector3i p = (vox.grid2world.inverse().eval()*Eigen::Vector4f(kps1(0, i), kps1(1, i), kps1(2, i), 1.0f)).topRows(3).array().round().cast<int>();
+
+    // A point is not close if abs(sdf) > resolution (which is 3 cm)
+    int x = p(0);
+    int y = p(1);
+    int z = p(2);
+    int idx = z*vox.dims(1)*vox.dims(0) + y*vox.dims(0) + x;
+    float value = vox.sdf[idx];
+    if (std::abs(value) > vox.res) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void crop_and_save(int window_size, float trunc, py::array_t<float> &kps, std::string filename_scan, std::string customname_out) {
   assert(kps.ndim() == 2 && "Keypoints array must be 2D array!");
   assert(kps.shape(0) == 3 && "Keypoints array must have n_cols = 3!");
