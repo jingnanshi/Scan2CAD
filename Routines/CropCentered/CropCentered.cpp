@@ -49,7 +49,7 @@ inline static void crop_center(int x, int y, int z, int window_size, float trunc
 std::vector<float> get_random_voxel_point(std::string filename_scan) {
   Vox vox = load_vox(filename_scan);
 
-  float value = 0;
+  float value = 1000;
   int i = 0, j= 0, k = 0;
   std::random_device dev;
   std::mt19937 rng(dev());
@@ -57,14 +57,21 @@ std::vector<float> get_random_voxel_point(std::string filename_scan) {
   std::uniform_int_distribution<std::mt19937::result_type> j_dist(0,vox.dims(1));
   std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2));
 
-  while (value == 0) {
-    std::cout << "Generating random voxel point for " << filename_scan << std::endl;
+  //std::cout << "sdf:";
+  //for (size_t c = 0; c < vox.sdf.size(); ++c) {
+  //  std::cout << vox.sdf[c] << ",";
+  //}
+  //std::cout << std::endl;
+
+  std::cout << "Generating random voxel point for " << filename_scan << std::endl;
+  do {
     i = i_dist(rng);
     j = j_dist(rng);
     k = k_dist(rng);
+    std::cout << "Try this voxel -- i:" << i << " j:" << j << " k:" << k << std::endl;
     int idx = k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i;
     value = vox.sdf[idx];
-  }
+  } while (std::abs(value) >= vox.res);
 
   Eigen::Vector4f voxel_result;
   voxel_result << i,j,k,1;
