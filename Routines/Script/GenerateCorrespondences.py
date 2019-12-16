@@ -162,6 +162,10 @@ if __name__ == '__main__':
 
         training_data = []
 
+
+        ###########################################################
+        ## Positive training data
+        ###########################################################
         counter_cads = 0
         counter_heatmaps = 0
         for model in r["aligned_models"]:
@@ -205,13 +209,17 @@ if __name__ == '__main__':
             counter_cads += 1
             # <-
 
-        neg_counter_cads, neg_counter_heatmaps = gen_negative_samples_2(r, params, counter_cads, counter_heatmaps)
-
+        ###########################################
+        ## Negative training data                ##
+        ###########################################
+        neg_kind_1_num_to_gen = counter_heatmaps 
+        gen_negative_samples_1(r, params, neg_kind_1_num_to_gen, training_data)
+        neg_counter_cads_2, neg_counter_heatmaps_2 = gen_negative_samples_2(r, params, training_data) 
 
         print("\n*********")
         print("Generated positive training samples (heatmaps):", counter_heatmaps, "for", counter_cads, "cad models.")
-        print("Generated negative kind 2 training samples (heatmaps):", neg_counter_heatmaps, "for", neg_counter_cads, "cad models.")
-        print("The demo version generates POSITIVE correspondences only for a single scene (scene0470_00). If you want to generate training data for all scannet scenes then just ask for the data.\n")
+        print("Generated negative kind 1 training samples (heatmaps):", neg_kind_1_num_to_gen)
+        print("Generated negative kind 2 training samples (heatmaps):", neg_counter_heatmaps_2, "for", neg_counter_cads_2, "cad models.")
 
         filename_json = "../../Assets/training-data/trainset.json"
         JSONHelper.write(filename_json, training_data)
