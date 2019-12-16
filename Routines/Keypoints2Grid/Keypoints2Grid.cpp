@@ -34,6 +34,39 @@ void project_and_save(float val, py::array_t<float> &kps, std::string filename_c
 }
 
 /**
+ * Helper function for getting a random point on CAD surface
+ *
+ */
+std::vector<float> get_random_cad_voxel_point(std::string filename_cad) {
+  Vox vox = load_vox(filename_cad);
+
+  float value = 1000; // arbitrary large value
+  int i = 0, j= 0, k = 0;
+  std::random_device dev;
+  std::mt19937 rng(dev());
+  std::uniform_int_distribution<std::mt19937::result_type> i_dist(0,vox.dims(0));
+  std::uniform_int_distribution<std::mt19937::result_type> j_dist(0,vox.dims(1));
+  std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2));
+
+  std::cout << "Generating random voxel point for " << filename_scan << std::endl;
+  do {
+    i = i_dist(rng);
+    j = j_dist(rng);
+    k = k_dist(rng);
+    std::cout << "Try this voxel -- i:" << i << " j:" << j << " k:" << k << std::endl;
+    int idx = k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i;
+    value = vox.sdf[idx];
+  } while (std::abs(value) >= vox.res);
+
+  Eigen::Vector4f voxel_result;
+  voxel_result << i,j,k,1;
+  Eigen::Vector4f world_coords = vox.grid2world.eval()*voxel_result;
+
+  std::vector<float> result = {world_coords(0), world_coords(1), world_coords(2)};
+  return result;
+}
+
+/**
  * Helper function for generating a heatmap CAD vox
  *
  * Currently each voxel has < 0.05 prob to be a keypoint
@@ -67,4 +100,5 @@ std::string random_heatmap_and_save(std::string filename_cad, std::string custom
 PYBIND11_MODULE(Keypoints2Grid, m) {
   m.def("project_and_save", &project_and_save, "project_and_save function");
   m.def("random_heatmap_and_save", &random_heatmap_and_save, "random_heatmap_and_save function");
+  m.def("get_random_cad_voxel_point", &get_random_cad_voxel_point, "get random voxel point on CAD surface");
 }
