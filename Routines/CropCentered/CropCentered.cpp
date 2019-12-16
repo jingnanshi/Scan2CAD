@@ -46,7 +46,7 @@ inline static void crop_center(int x, int y, int z, int window_size, float trunc
  * Helper function for getting a random voxel point
  *
  */
-std::vector<int> get_random_voxel_point(std::string filename_scan) {
+std::vector<float> get_random_voxel_point(std::string filename_scan) {
   Vox vox = load_vox(filename_scan);
 
   float value = 0;
@@ -66,7 +66,11 @@ std::vector<int> get_random_voxel_point(std::string filename_scan) {
     value = vox.sdf[idx];
   }
 
-  std::vector<int> result = {i,j,k};
+  Eigen::Vector4f voxel_result;
+  voxel_result << i,j,k,1;
+  Eigen::Vector4f world_coords = vox.grid2world.eval()*voxel_result;
+
+  std::vector<float> result = {world_coords(0),world_coords(1),world_coords(2)};
   return result;
 }
 

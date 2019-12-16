@@ -74,17 +74,19 @@ def gen_negative_samples_1(r, params, num_to_gen, training_data):
     for counter in range(num_to_gen):
         # get scene voxel file path
         id_scan = r["id_scan"]
+        Mscan = make_M_from_tqs(r["trs"]["translation"], r["trs"]["rotation"], r["trs"]["scale"])
         voxfile_scan = params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
 
         # basename for training data files
         basename_trainingdata = "_".join([id_scan, "neg1", str(counter)]) + "_"
 
         # randomly select voxel point in scene
-        kps_scan_og = CropCentered.get_random_voxel_point(voxfile_scan)
+        kps_scan_og = CropCentered.get_random_voxel_point(voxfile_scan) # in world frame
         kps_scan = np.array(kps_scan_og).reshape(3, -1, order="F")
         n_kps_scan = kps_scan.shape[1]
         assert(n_kps_scan==1)
-        kps_scan = np.asfortranarray(kps_scan[0:3, :])
+        kps_scan = np.vstack((kps_scan, np.ones((1, n_kps_scan))))
+        kps_scan = np.asfortranarray(np.dot(np.linalg.inv(Mscan), kps_scan)[0:3, :])
         assert kps_scan.flags['F_CONTIGUOUS'], "Make sure keypoint array is col-major and continuous!"
         filename_vox_center = CropCentered.single_crop_and_save(63, -5*0.03, kps_scan, voxfile_scan, params["centers"] + "/" + basename_trainingdata)
 
