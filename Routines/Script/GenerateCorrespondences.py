@@ -79,24 +79,23 @@ def gen_negative_samples_1(r, params, num_to_gen, training_data):
         kps_scan_og = CropCentered.get_random_voxel_point(voxfile_scan)
         kps_scan = np.array(kps_scan_og).reshape(3, -1, order="F")
         n_kps_scan = kps_scan.shape[1]
+        assert(n_kps_scan==1)
         kps_scan = np.asfortranarray(kps_scan[0:3, :])
         assert kps_scan.flags['F_CONTIGUOUS'], "Make sure keypoint array is col-major and continuous!"
-        CropCentered.crop_and_save(63, -5*0.03, kps_scan, voxfile_scan, params["centers"] + "/" + basename_trainingdata)
+        filename_vox_center = CropCentered.single_crop_and_save(63, -5*0.03, kps_scan, voxfile_scan, params["centers"] + "/" + basename_trainingdata)
 
         # randomly select cad model & gen heatmaps
         cat_choice, cad_id_choice, voxfile_cad = pick_random_vox_cad(params, None)
-        Keypoints2Grid.random_heatmap_and_save(n_kps_scan, voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
+        filename_vox_heatmap = Keypoints2Grid.random_heatmap_and_save(n_kps_scan, voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
 
         # save the training data json file
         scale = [random.random()*2,random.random()*2, random.random()*2] 
-        # this for loop only runs once
-        for i in range(n_kps_scan):
-            p_scan = kps_scan[0:3, i].tolist()
-            filename_vox_center = params["centers"] + "/" + basename_trainingdata + str(i) + ".vox"
-            filename_vox_heatmap = params["heatmaps"] + "/" + basename_trainingdata + str(i) + ".vox2"
-            item = {"filename_vox_center" : filename_vox_center, "filename_vox_heatmap" : filename_vox_heatmap, "customname" : basename_trainingdata + str(i), 
-                    "p_scan" : p_scan, "scale" : scale, "match" : True} # <-- in this demo only positive samples
-            training_data.append(item)
+        p_scan = kps_scan[0:3, i].tolist()
+        filename_vox_center = params["centers"] + "/" + basename_trainingdata + ".vox"
+        filename_vox_heatmap = params["heatmaps"] + "/" + basename_trainingdata + ".vox2"
+        item = {"filename_vox_center" : filename_vox_center, "filename_vox_heatmap" : filename_vox_heatmap, "customname" : basename_trainingdata,
+                "p_scan" : p_scan, "scale" : scale, "match" : True} # <-- in this demo only positive samples
+        training_data.append(item)
 
     print("Generated negative samples of kind 1:", num_to_gen)
     return
@@ -136,8 +135,7 @@ def gen_negative_samples_2(r, params, training_data):
 
             # Pick a random CAD model from a different class
             catid_cad, id_cad, voxfile_cad = pick_random_vox_cad(params, catid_cad)
-            filename_vox_heatmap_l = Keypoints2Grid.random_heatmap_and_save(voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
-            filename_vox_heatmap = filename_vox_heatmap_l[0]
+            filename_vox_heatmap = Keypoints2Grid.random_heatmap_and_save(voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
 
             # save the training data file
             scale = model["trs"]["scale"]
