@@ -40,21 +40,24 @@ void project_and_save(float val, py::array_t<float> &kps, std::string filename_c
  *
  * For generating negative samples.
  */
-void random_heatmap_and_save(float val, std::string filename_cad, std::string customname_out) {
+void random_heatmap_and_save(std::string filename_cad, std::string customname_out) {
 
   Vox vox = load_vox(filename_cad);
   vox.pdf.resize(vox.dims(0)*vox.dims(1)*vox.dims(2));
   float prob_t = 0.05;
-  for (int i = 0; i < vox.dims[0]; ++i) {
+
+  for (int k = 0; k < vox.dims[2]; ++k) {
     for (int j = 0; j < vox.dims[1]; ++j) {
-      for (int k = 0; k < vox.dims[2]; ++k) {
-        if (rand() % 1 < prob_t) {
-          vox.pdf[k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i] = 1;
+      for (int i = 0; i < vox.dims[0]; ++i) {
+        if (vox.sdf[k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i] != 0) {
+          if (rand() % 1 < prob_t) {
+            vox.pdf[k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i] = 1;
+          }
         }
       }
     }
   }
-  std::string filename = customname_out + "neg1" + std::string(".vox2");
+  std::string filename = customname_out + std::string(".vox2");
   save_vox(filename, vox);
 }
 

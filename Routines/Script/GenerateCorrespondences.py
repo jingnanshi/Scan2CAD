@@ -45,8 +45,9 @@ def pick_random_vox_cad(params, not_cat_id):
     
     # select a different category
     cat_choice = random.choice(first_nodes)
-    while (cat_choice == not_cat_id or not cat_choice.isdigit()):
-        cat_choice = random.choice(first_nodes)
+    if not_cat_id is not None:
+        while (cat_choice == not_cat_id or not cat_choice.isdigit()):
+            cat_choice = random.choice(first_nodes)
     cad_choice_path = os.path.join(shapenet_vox_path, cat_choice)
 
     # select a vox cad file from this category
@@ -60,58 +61,92 @@ def pick_random_vox_cad(params, not_cat_id):
 
     return cat_choice, cad_id_choice, voxfile_path
 
-def gen_negative_samples_2(r, params, starting_cad_id, starting_heatmap_id):
+def gen_negative_samples_1(r, params, num_to_gen, training_data):
     """
-    Generate negative samples from annoted keypoints and random CAD models 
+    Generate negative samples from randomly selected voxel point in the scan and a 
+    random CAD model
     """
-    counter_cads = starting_cad_id
-    counter_heatmaps = starting_heatmap_id
 
-    for model in r["aligned_models"]:
-        # the GT cat and cad id
-        catid_cad = model["catid_cad"]
-        id_cad = model["id_cad"]
+    for counter in range(num_to_gen):
+        # get scene voxel file path
+        id_scan = r["id_scan"]
+        voxfile_scan = params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
 
-        # Pick a random CAD model from a different class
-        catid_cad, id_cad, cadvoxfile_path = pick_random_vox_cad(params, catid_cad)
-        
-        Mcad = make_M_from_tqs(model["trs"]["translation"], model["trs"]["rotation"], model["trs"]["scale"])
-        print("NEGATIVE SAMPLE: catid-cad", catid_cad, "id-cad", id_cad, model["sym"])
-        
-        basename_trainingdata = "_".join([id_scan, catid_cad, id_cad, str(counter_cads)]) + "_" # <-- this defines the basename of the training data for crops and heatmaps. pattern is "id_scan/catid_cad/id_cad/i_cad/i_kp"
+        # basename for training data files
+        basename_trainingdata = "_".join([id_scan, "neg1", str(counter)]) + "_"
 
-        # -> Create CAD heatmaps
-        voxfile_cad = params["shapenet_voxelized"] + "/" + catid_cad + "/" + id_cad + "__0__.df"
-        kps_cad = np.array(model["keypoints_cad"]["position"]).reshape(3, -1, order="F")
-        n_kps_cad = kps_cad.shape[1]
-        kps_cad = np.vstack((kps_cad, np.ones((1, n_kps_cad))))
-        kps_cad = np.asfortranarray(np.dot(np.linalg.inv(Mcad), kps_cad)[0:3, :])
-        # NOTE: Symmetry not handled. You have to take care of it.
-        assert kps_cad.flags['F_CONTIGUOUS'] == True, "Make sure keypoint array is col-major and continuous!"
-        Keypoints2Grid.project_and_save(1.0, kps_cad, voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
-        # <-
-
-        # -> Create scan centered crops
-        kps_scan = np.array(model["keypoints_scan"]["position"]).reshape(3, -1, order="F")
+        # randomly select voxel point in scene
+        kps_scan_og = CropCentered.get_random_voxel_point(voxfile_scan)
+        kps_scan = np.array(kps_scan_og).reshape(3, -1, order="F")
         n_kps_scan = kps_scan.shape[1]
-        kps_scan = np.vstack((kps_scan, np.ones((1, n_kps_scan))))
-        kps_scan = np.asfortranarray(np.dot(np.linalg.inv(Mscan), kps_scan)[0:3, :])
+        kps_scan = np.asfortranarray(kps_scan[0:3, :])
         assert kps_scan.flags['F_CONTIGUOUS'], "Make sure keypoint array is col-major and continuous!"
         CropCentered.crop_and_save(63, -5*0.03, kps_scan, voxfile_scan, params["centers"] + "/" + basename_trainingdata)
-        # <-
 
-        # -> training list (to be read in by the network)
-        scale = model["trs"]["scale"]
+        # randomly select cad model & gen heatmaps
+        cat_choice, cad_id_choice, voxfile_cad = pick_random_vox_cad(params, None)
+        Keypoints2Grid.random_heatmap_and_save(n_kps_scan, voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
+
+        # save the training data json file
+        scale = [random.random()*2,random.random()*2, random.random()*2] 
+        # this for loop only runs once
         for i in range(n_kps_scan):
             p_scan = kps_scan[0:3, i].tolist()
             filename_vox_center = params["centers"] + "/" + basename_trainingdata + str(i) + ".vox"
             filename_vox_heatmap = params["heatmaps"] + "/" + basename_trainingdata + str(i) + ".vox2"
             item = {"filename_vox_center" : filename_vox_center, "filename_vox_heatmap" : filename_vox_heatmap, "customname" : basename_trainingdata + str(i), 
-                    "p_scan" : p_scan, "scale" : scale, "match" : False} 
+                    "p_scan" : p_scan, "scale" : scale, "match" : True} # <-- in this demo only positive samples
+            training_data.append(item)
+
+    print("Generated negative samples of kind 1:", num_to_gen)
+    return
+
+
+def gen_negative_samples_2(r, params, training_data):
+    """
+    Generate negative samples from annoted keypoints and random CAD models 
+    """
+    counter_cads = 0
+    counter_heatmaps = 0
+
+    for model in r["aligned_models"]:
+        # the GT cat and cad id
+        catid_cad = model["catid_cad"]
+        id_cad = model["id_cad"]
+        
+        # get all annotated keypoints 
+        kps_scan_og = np.array(model["keypoints_scan"]["position"]).reshape(3, -1, order="F")
+        n_kps_scan_og = kps_scan_og.shape[1]
+
+        # iterate through all the annotated keypoints
+        # for each point, we pair it with a random CAD of the wrong class
+        for i in range(n_kps_scan_og):
+            # basename for training data
+            basename_trainingdata = "_".join([id_scan, "neg2", catid_cad, id_cad, str(counter_cads), str(i)])
+            p_scan = kps_scan_og[0:3, i].tolist()
+
+            # generate centered crop (for the current scan keypoint only)
+            kps_scan = np.array(p_scan).reshape(3, -1, order="F")
+            n_kps_scan = kps_scan.shape[1]
+            assert(n_kps_scan == 1)
+            kps_scan = np.vstack((kps_scan, np.ones((1, n_kps_scan))))
+            kps_scan = np.asfortranarray(np.dot(np.linalg.inv(Mscan), kps_scan)[0:3, :])
+            assert kps_scan.flags['F_CONTIGUOUS'], "Make sure keypoint array is col-major and continuous!"
+            filename_vox_center = CropCentered.single_crop_and_save(63, -5*0.03, kps_scan, voxfile_scan, params["centers"] + "/" + basename_trainingdata)
+
+            # Pick a random CAD model from a different class
+            catid_cad, id_cad, voxfile_cad = pick_random_vox_cad(params, catid_cad)
+            filename_vox_heatmap_l = Keypoints2Grid.random_heatmap_and_save(voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
+            filename_vox_heatmap = filename_vox_heatmap_l[0]
+
+            # save the training data file
+            scale = model["trs"]["scale"]
+            item = {"filename_vox_center" : filename_vox_center, "filename_vox_heatmap" : filename_vox_heatmap, "customname" : basename_trainingdata, "p_scan" : p_scan, "scale" : scale, "match" : False} 
             training_data.append(item)
             counter_heatmaps += 1
         counter_cads += 1
-
+            
+    print("Generated negative samples (heatmaps):", counter_heatmaps, "for", counter_cads, "cad models.")
     return counter_cads, counter_heatmaps
 
 if __name__ == '__main__':
@@ -172,11 +207,12 @@ if __name__ == '__main__':
             counter_cads += 1
             # <-
 
-        counter_cads, counter_heatmaps = gen_negative_samples_2(r, params, counter_cads, counter_heatmaps)
+        neg_counter_cads, neg_counter_heatmaps = gen_negative_samples_2(r, params, counter_cads, counter_heatmaps)
 
 
         print("\n*********")
-        print("Generated training samples (heatmaps):", counter_heatmaps, "for", counter_cads, "cad models.")
+        print("Generated positive training samples (heatmaps):", counter_heatmaps, "for", counter_cads, "cad models.")
+        print("Generated negative kind 2 training samples (heatmaps):", neg_counter_heatmaps, "for", neg_counter_cads, "cad models.")
         print("The demo version generates POSITIVE correspondences only for a single scene (scene0470_00). If you want to generate training data for all scannet scenes then just ask for the data.\n")
 
         filename_json = "../../Assets/training-data/trainset.json"
