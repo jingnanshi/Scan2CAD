@@ -65,6 +65,29 @@ def pick_random_vox_cad(params, not_cat_id):
 
     return cat_choice, cad_id_choice, voxfile_path
 
+def gen_positive_aug_samples(r, params, num_to_gen, training_data):
+    """
+    Generate positive (augmented data) for training.
+
+    Randomly sample on CAD and use GT transform to the scan space
+    """
+    counter_cads = 0
+    counter_heatmaps = 0
+
+    for model in r["aligned_models"]:
+        # the GT cat, cad id, gt_transform
+        catid_cad = model["catid_cad"]
+        id_cad = model["id_cad"]
+        M_gt_cad2world = make_M_from_tqs(model["trs"]["translation"], model["trs"]["rotation"], model["trs"]["scale"])
+
+        # TODO: sample randomly on CAD surface
+        # TODO: check whether the point is close to scan surface
+        # TODO: if not, resample
+        
+            
+    print("Generated negative samples (heatmaps):", counter_heatmaps, "for", counter_cads, "cad models.")
+    return counter_cads, counter_heatmaps
+
 def gen_negative_samples_1(r, params, num_to_gen, training_data):
     """
     Generate negative samples from randomly selected voxel point in the scan and a 
