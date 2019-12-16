@@ -48,6 +48,10 @@ def pick_random_vox_cad(params, not_cat_id):
     if not_cat_id is not None:
         while (cat_choice == not_cat_id or not cat_choice.isdigit()):
             cat_choice = random.choice(first_nodes)
+    else:
+        while (not cat_choice.isdigit()):
+            cat_choice = random.choice(first_nodes)
+
     cad_choice_path = os.path.join(shapenet_vox_path, cat_choice)
 
     # select a vox cad file from this category
@@ -86,15 +90,15 @@ def gen_negative_samples_1(r, params, num_to_gen, training_data):
 
         # randomly select cad model & gen heatmaps
         cat_choice, cad_id_choice, voxfile_cad = pick_random_vox_cad(params, None)
-        filename_vox_heatmap = Keypoints2Grid.random_heatmap_and_save(n_kps_scan, voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
+        filename_vox_heatmap = Keypoints2Grid.random_heatmap_and_save(voxfile_cad, params["heatmaps"] + "/" + basename_trainingdata)
 
         # save the training data json file
         scale = [random.random()*2,random.random()*2, random.random()*2] 
-        p_scan = kps_scan[0:3, i].tolist()
+        p_scan = kps_scan[0:3, 0].tolist()
         filename_vox_center = params["centers"] + "/" + basename_trainingdata + ".vox"
         filename_vox_heatmap = params["heatmaps"] + "/" + basename_trainingdata + ".vox2"
         item = {"filename_vox_center" : filename_vox_center, "filename_vox_heatmap" : filename_vox_heatmap, "customname" : basename_trainingdata,
-                "p_scan" : p_scan, "scale" : scale, "match" : True} # <-- in this demo only positive samples
+                "p_scan" : p_scan, "scale" : scale, "match" : False} 
         training_data.append(item)
 
     print("Generated negative samples of kind 1:", num_to_gen)

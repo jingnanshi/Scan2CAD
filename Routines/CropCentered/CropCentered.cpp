@@ -49,8 +49,6 @@ inline static void crop_center(int x, int y, int z, int window_size, float trunc
 std::vector<int> get_random_voxel_point(std::string filename_scan) {
   Vox vox = load_vox(filename_scan);
 
-  float prob_t = 0.05;
-
   float value = 0;
   int i = 0, j= 0, k = 0;
   std::random_device dev;
@@ -60,7 +58,7 @@ std::vector<int> get_random_voxel_point(std::string filename_scan) {
   std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2));
 
   while (value == 0) {
-    std::cout << "Generating random voxel point for " << filename_scan << st::endl;
+    std::cout << "Generating random voxel point for " << filename_scan << std::endl;
     i = i_dist(rng);
     j = j_dist(rng);
     k = k_dist(rng);
