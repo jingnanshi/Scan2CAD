@@ -63,7 +63,6 @@ std::vector<float> get_random_voxel_point(std::string filename_scan) {
   //}
   //std::cout << std::endl;
 
-  std::cout << "Generating random voxel point for " << filename_scan << std::endl;
   do {
     i = i_dist(rng);
     j = j_dist(rng);
