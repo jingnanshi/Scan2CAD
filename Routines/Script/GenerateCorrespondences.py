@@ -24,7 +24,32 @@ import multiprocessing as mp
 import CSVHelper
 import JSONHelper
 import utils
+import time
 
+
+# Print iterations progress
+def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100):
+    """
+    Call in a loop to create terminal progress bar
+
+    @params:
+    iteration   - Required  : current iteration (Int)
+    total       - Required  : total iterations (Int)
+    prefix      - Optional  : prefix string (Str)
+    suffix      - Optional  : suffix string (Str)
+    decimals    - Optional  : positive number of decimals in percent complete (Int)
+    bar_length  - Optional  : character length of bar (Int)
+    """
+    str_format = "{0:." + str(decimals) + "f}"
+    percents = str_format.format(100 * (iteration / float(total)))
+    filled_length = int(round(length * iteration / float(total)))
+    bar = '█' * filled_length + '-' * (length - filled_length)
+
+    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percents, '%', suffix)),
+
+    if iteration == total:
+        sys.stdout.write('\n')
+    sys.stdout.flush()
 
 def make_M_from_tqs(t, q, s):
     q = np.quaternion(q[0], q[1], q[2], q[3])
@@ -141,8 +166,8 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                         params["heatmaps"] + "/" + basename_trainingdata,
                     )
                     if filename_vox_heatmap is None or len(filename_vox_heatmap) == 0:
-                        print("WARNING: empty vox heatmap file name. Resample.")
-                        continue
+                        print("WARNING: empty vox heatmap file name for", id_cad ,". Skip it.")
+                        break 
 
                     # save centered crop
                     kps_scan = sampled_kps_cad_scanframe
@@ -344,13 +369,17 @@ if __name__ == "__main__":
 
     print("NOTE: Symmetry not handled. You have to take care of it.")
 
-    for r in JSONHelper.read("./full_annotations.json"):
+    training_data = []
+    total_scenes_num = len(scan_to_test)
+    all_annotations = JSONHelper.read("./full_annotations.json")
+    printProgressBar(0, total_scenes_num, prefix = 'Progress:', suffix = 'Complete', length = 50)
+    for i, r in enumerate(all_annotations):
         id_scan = r["id_scan"]
         if id_scan not in scan_to_test:
-            print("Skip ", id_scan)
+            print("\nSkip ", id_scan)
             continue
         else:
-            print("Generate data for ", id_scan)
+            print("\nGenerate data for ", id_scan)
 
         voxfile_scan = (
             params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + "_res30mm_rot0.vox"
@@ -359,7 +388,6 @@ if __name__ == "__main__":
             r["trs"]["translation"], r["trs"]["rotation"], r["trs"]["scale"]
         )
 
-        training_data = []
 
         ###########################################################
         ## Positive training data: GT Annotations
@@ -374,7 +402,6 @@ if __name__ == "__main__":
                 model["trs"]["rotation"],
                 model["trs"]["scale"],
             )
-            print("catid-cad", catid_cad, "id-cad", id_cad, model["sym"])
 
             basename_trainingdata = (
                 "_".join([id_scan, catid_cad, id_cad, str(counter_cads)]) + "_"
@@ -470,7 +497,9 @@ if __name__ == "__main__":
         )
         gen_negative_samples_1(r, params, neg_kind_1_num_to_gen, training_data)
 
-        print("\n*********")
+        print("\n****************")
+        print("\nFor ", id_scan)
+        print("\n****************")
         print(
             "Generated positive training samples (heatmaps):",
             counter_heatmaps,
@@ -503,13 +532,15 @@ if __name__ == "__main__":
             neg_kind_1_num_to_gen + neg_counter_heatmaps_2,
             " negative samples.",
         )
+        print("\n****************")
+        printProgressBar(i + 1, total_scenes_num, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
-        if parser_results.split_type == "train":
-            filename_json = "../../Assets/training-data/trainset.json"
-        elif parser_results.split_type == "val":
-            filename_json = "../../Assets/training-data/valset.json"
-        else:
-            filename_json = "../../Assets/training-data/unknownset.json"
+    if parser_results.split_type == "train":
+        filename_json = "../../Assets/training-data/trainset.json"
+    elif parser_results.split_type == "val":
+        filename_json = "../../Assets/training-data/valset.json"
+    else:
+        filename_json = "../../Assets/training-data/unknownset.json"
 
-        JSONHelper.write(filename_json, training_data)
-        print("Training json-file (needed from network) saved in:", filename_json)
+    JSONHelper.write(filename_json, training_data)
+    print("Training json-file (needed from network) saved in:", filename_json)
