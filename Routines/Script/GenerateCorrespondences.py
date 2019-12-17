@@ -104,7 +104,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
 
             # basename for saving training data
             basename_trainingdata = (
-                    "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads), str(p_count)]) + "_"
+                    "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads), str(p_count)])
                     )
 
             while True:
@@ -134,12 +134,15 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                             kps_cad.flags["F_CONTIGUOUS"] == True
                             ), "Make sure keypoint array is col-major and continuous!"
 
-                    filename_vox_heatmap = Keypoints2Grid.project_and_save(
+                    filename_vox_heatmap = Keypoints2Grid.single_project_and_save(
                             1.0,
                             kps_cad,
                             voxfile_cad,
                             params["heatmaps"] + "/" + basename_trainingdata,
                             )
+                    if filename_vox_heatmap is None or len(filename_vox_heatmap) == 0:
+                        print("WARNING: empty vox heatmap file name. Resample.")
+                        continue
 
                     # save centered crop
                     kps_scan = sampled_kps_cad_scanframe
@@ -153,6 +156,10 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                             voxfile_scan,
                             params["centers"] + "/" + basename_trainingdata,
                             )
+                    if filename_vox_center is None or len(filename_vox_center) == 0:
+                        print("WARNING: empty vox heatmap file name. Resample.")
+                        continue
+
 
                     # dump to file
                     scale = model["trs"]["scale"]

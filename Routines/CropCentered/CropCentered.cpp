@@ -68,7 +68,6 @@ std::vector<float> get_random_voxel_point(std::string filename_scan) {
     i = i_dist(rng);
     j = j_dist(rng);
     k = k_dist(rng);
-    std::cout << "Try this voxel -- i:" << i << " j:" << j << " k:" << k << std::endl;
     int idx = k*vox.dims(1)*vox.dims(0) + j*vox.dims(0) + i;
     value = vox.sdf[idx];
   } while (std::abs(value) >= vox.res);
