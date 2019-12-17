@@ -1,5 +1,6 @@
 {
 	"scannet" : "../../Assets/scannet/",
+	"scannet_metadata" : "../../Assets/scannet-metadata/",
 	"shapenet" : "../../Assets/shapenet/",
 	"scannet_voxelized" : "../../Assets/scannet-voxelized-sdf-sample/",
 	"shapenet_voxelized" : "../../Assets/shapenet-voxelized-df-sample/",
