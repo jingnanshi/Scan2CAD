@@ -76,11 +76,10 @@ std::vector<float> get_random_cad_voxel_point(std::string filename_cad) {
   int i = 0, j= 0, k = 0;
   std::random_device dev;
   std::mt19937 rng(dev());
-  std::uniform_int_distribution<std::mt19937::result_type> i_dist(0,vox.dims(0));
-  std::uniform_int_distribution<std::mt19937::result_type> j_dist(0,vox.dims(1));
-  std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2));
+  std::uniform_int_distribution<std::mt19937::result_type> i_dist(0,vox.dims(0)-1);
+  std::uniform_int_distribution<std::mt19937::result_type> j_dist(0,vox.dims(1)-1);
+  std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2)-1);
 
-  std::cout << "Generating random voxel point for " << filename_cad << std::endl;
   do {
     i = i_dist(rng);
     j = j_dist(rng);
