@@ -83,7 +83,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
     counter_cads = 0
     counter_heatmaps = 0
     id_scan = r["id_scan"]
-    voxfile_scan = params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
+    voxfile_scan = params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + "_res30mm_rot0.vox"
     Mscan = make_M_from_tqs(
         r["trs"]["translation"], r["trs"]["rotation"], r["trs"]["scale"]
     )
@@ -199,7 +199,7 @@ def gen_negative_samples_1(r, params, num_to_gen, training_data):
             r["trs"]["translation"], r["trs"]["rotation"], r["trs"]["scale"]
         )
         voxfile_scan = (
-            params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
+            params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + "_res30mm_rot0.vox"
         )
 
         # basename for training data files
@@ -353,7 +353,7 @@ if __name__ == "__main__":
             print("Generate data for ", id_scan)
 
         voxfile_scan = (
-            params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
+            params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + "_res30mm_rot0.vox"
         )
         Mscan = make_M_from_tqs(
             r["trs"]["translation"], r["trs"]["rotation"], r["trs"]["scale"]
