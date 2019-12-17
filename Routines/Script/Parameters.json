@@ -2,8 +2,8 @@
 	"scannet" : "../../Assets/scannet/scans/",
 	"scannet_metadata" : "../../Assets/scannet-metadata/",
 	"shapenet" : "../../Assets/shapenet/",
-	"scannet_voxelized" : "../../Assets/scannet-voxelized-sdf-sample/",
-	"shapenet_voxelized" : "../../Assets/shapenet-voxelized-df-sample/",
-	"centers" : "../../Assets/training-data/scan-centers-sample/",
-	"heatmaps" : "../../Assets/training-data/CAD-heatmaps-sample/"
+	"scannet_voxelized" : "../../Assets/scannet-vox/",
+	"shapenet_voxelized" : "../../Assets/shapenet-vox/",
+	"centers" : "../../Assets/training-data/scan-centers/",
+	"heatmaps" : "../../Assets/training-data/CAD-heatmaps/"
 }

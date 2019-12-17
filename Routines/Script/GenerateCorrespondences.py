@@ -329,9 +329,10 @@ def gen_negative_samples_2(r, params, training_data):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-split_type', action="store", default="train", dest="split_type")
+    parser.add_argument('--split_type', action="store", default="train", dest="split_type")
+    parser.add_argument('--params_file', action="store", default="./Parameters.json", dest="params")
     parser_results = parser.parse_args()
-    params = JSONHelper.read("./Parameters.json")
+    params = JSONHelper.read(parser_results.params)
 
     # Load scannet split information
     scan_to_test = utils.load_scannet_split(params["scannet_metadata"], split_type=parser_results.split_type)
@@ -484,7 +485,13 @@ if __name__ == "__main__":
                 "cad models.",
                 )
 
-        filename_json = "../../Assets/training-data/trainset.json"
+        if parser_results.split_type == "train":
+            filename_json = "../../Assets/training-data/trainset.json"
+        elif parser_results.split_type == "val":
+            filename_json = "../../Assets/training-data/valset.json"
+        else: 
+            filename_json = "../../Assets/training-data/unknownset.json"
+ 
         JSONHelper.write(filename_json, training_data)
         print("Training json-file (needed from network) saved in:", filename_json)
 
