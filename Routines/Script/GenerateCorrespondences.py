@@ -99,13 +99,14 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                 params["shapenet_voxelized"] + "/" + catid_cad + "/" + id_cad + "__0__.df"
                 )
 
-        # basename for saving training data
-        basename_trainingdata = (
-                "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads)]) + "_"
-                )
-
         # Sample randmly on CAD surface
         for p_count in range(num_per_cad_to_gen):
+
+            # basename for saving training data
+            basename_trainingdata = (
+                    "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads), p_count]) + "_"
+                    )
+
             while True:
                 # sampled_kps_cad: in CAD frame
                 sampled_kps_cad = Keypoints2Grid.get_random_cad_voxel_point(voxfile_cad)
@@ -164,6 +165,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                             "scale": scale,
                             "match": True,
                             }
+                    training_data.append(item)
                     counter_heatmaps += 1
                     break
         counter_cads += 1
@@ -338,7 +340,7 @@ if __name__ == "__main__":
         training_data = []
 
         ###########################################################
-        ## Positive training data
+        ## Positive training data: GT Annotations
         ###########################################################
         counter_cads = 0
         counter_heatmaps = 0
@@ -425,6 +427,10 @@ if __name__ == "__main__":
             counter_cads += 1
             # <-
 
+        ###############################################
+        ## Positive training data: Data augmentation ##
+        ###############################################
+        aug_counter_cads, aug_counter_heatmaps = gen_positive_aug_samples(r, params, 1, training_data)
         ###########################################
         ## Negative training data                ##
         ###########################################
@@ -440,6 +446,13 @@ if __name__ == "__main__":
                 counter_heatmaps,
                 "for",
                 counter_cads,
+                "cad models.",
+                )
+        print(
+                "Generated augmented positive training samples (heatmaps):",
+                aug_counter_heatmaps,
+                "for",
+                aug_counter_cads,
                 "cad models.",
                 )
         print(
