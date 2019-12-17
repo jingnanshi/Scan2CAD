@@ -2,8 +2,6 @@ import sys
 
 assert sys.version_info >= (3, 5)
 
-import sys
-
 sys.path.append("../CropCentered")
 import CropCentered
 
@@ -13,6 +11,7 @@ import Keypoints2Grid
 import numpy as np
 
 np.warnings.filterwarnings("ignore")
+import argparse
 import glob
 import re
 import pathlib
@@ -24,6 +23,7 @@ import random
 import multiprocessing as mp
 import CSVHelper
 import JSONHelper
+import utils
 
 
 def make_M_from_tqs(t, q, s):
@@ -328,14 +328,23 @@ def gen_negative_samples_2(r, params, training_data):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-split_type', action="store", default="train", dest="split_type")
+    parser_results = parser.parse_args()
     params = JSONHelper.read("./Parameters.json")
+
+    # Load scannet split information
+    scan_to_test = utils.load_scannet_split(params["scannet_metadata"], split_type=parser_results.split_type)
 
     print("NOTE: Symmetry not handled. You have to take care of it.")
 
     for r in JSONHelper.read("./full_annotations.json"):
         id_scan = r["id_scan"]
-        if id_scan != "scene0470_00":
+        if id_scan not in scan_to_test:
+            print("Skip ", id_scan)
             continue
+        else:
+            print("Generate data for ", id_scan)
 
         voxfile_scan = (
                 params["scannet_voxelized"] + "/" + id_scan + "/" + id_scan + ".vox"
