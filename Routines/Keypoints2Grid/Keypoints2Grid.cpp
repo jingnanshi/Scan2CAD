@@ -1,6 +1,7 @@
 #include <eigen3/Eigen/Dense>
 #include <vector>
 #include <cstdlib>
+#include <random>
 
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
@@ -31,10 +32,11 @@ std::string single_project_and_save(float val, py::array_t<float> &kps, std::str
   int i = 0;
   std::fill(vox.pdf.begin(), vox.pdf.end(), 0.0f);
   Eigen::Vector3i p = (vox.grid2world.inverse().eval()*Eigen::Vector4f(kps1(0, i), kps1(1, i), kps1(2, i), 1.0f)).topRows(3).array().round().cast<int>();
+  std::string filename;
   if ((p.array() >= Eigen::Array3i(0, 0, 0)).all() && (p.array() < vox.dims.array()).all()) {
     vox.pdf[p(2)*vox.dims(1)*vox.dims(0) + p(1)*vox.dims(0) + p(0)] = val;
 
-    std::string filename = customname_out  + std::string(".vox2");
+    filename = customname_out  + std::string(".vox2");
     save_vox(filename, vox);
   }
 
@@ -78,7 +80,7 @@ std::vector<float> get_random_cad_voxel_point(std::string filename_cad) {
   std::uniform_int_distribution<std::mt19937::result_type> j_dist(0,vox.dims(1));
   std::uniform_int_distribution<std::mt19937::result_type> k_dist(0,vox.dims(2));
 
-  std::cout << "Generating random voxel point for " << filename_scan << std::endl;
+  std::cout << "Generating random voxel point for " << filename_cad << std::endl;
   do {
     i = i_dist(rng);
     j = j_dist(rng);

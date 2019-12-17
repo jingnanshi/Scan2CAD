@@ -167,4 +167,5 @@ PYBIND11_MODULE(CropCentered, m) {
   m.def("crop_and_save", &crop_and_save, "crop function");
   m.def("single_crop_and_save", &single_crop_and_save, "single crop and save function");
   m.def("get_random_voxel_point", &get_random_voxel_point, "random voxel point function");
+  m.def("close_to_surface", &close_to_surface, "function for checking whether a point is close to surface");
 }

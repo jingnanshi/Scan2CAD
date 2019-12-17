@@ -104,7 +104,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
 
             # basename for saving training data
             basename_trainingdata = (
-                    "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads), p_count]) + "_"
+                    "_".join([id_scan, "aug", catid_cad, id_cad, str(counter_cads), str(p_count)]) + "_"
                     )
 
             while True:
@@ -115,7 +115,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
                 sampled_kps_cad = np.vstack((sampled_kps_cad, np.ones((1, 1))))
 
                 # use GT transform to transform it to world frame
-                temp = np.dot(Mcad, kps_cad)
+                temp = np.dot(Mcad, sampled_kps_cad)
 
                 # transform to scan frame
                 sampled_kps_cad_scanframe = np.asfortranarray(
@@ -129,7 +129,7 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
 
                 if close_to_surface:
                     # save CAD heatmap
-                    kps_cad = np.asfortranarray(sampled_kps_cad)[0:3, :])
+                    kps_cad = np.asfortranarray(sampled_kps_cad[0:3, :])
                     assert (
                             kps_cad.flags["F_CONTIGUOUS"] == True
                             ), "Make sure keypoint array is col-major and continuous!"
@@ -431,6 +431,7 @@ if __name__ == "__main__":
         ## Positive training data: Data augmentation ##
         ###############################################
         aug_counter_cads, aug_counter_heatmaps = gen_positive_aug_samples(r, params, 1, training_data)
+
         ###########################################
         ## Negative training data                ##
         ###########################################
