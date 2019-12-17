@@ -27,30 +27,6 @@ import utils
 import time
 
 
-# Print iterations progress
-def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100):
-    """
-    Call in a loop to create terminal progress bar
-
-    @params:
-    iteration   - Required  : current iteration (Int)
-    total       - Required  : total iterations (Int)
-    prefix      - Optional  : prefix string (Str)
-    suffix      - Optional  : suffix string (Str)
-    decimals    - Optional  : positive number of decimals in percent complete (Int)
-    bar_length  - Optional  : character length of bar (Int)
-    """
-    str_format = "{0:." + str(decimals) + "f}"
-    percents = str_format.format(100 * (iteration / float(total)))
-    filled_length = int(round(length * iteration / float(total)))
-    bar = '█' * filled_length + '-' * (length - filled_length)
-
-    sys.stdout.write('\r%s |%s| %s%s %s' % (prefix, bar, percents, '%', suffix)),
-
-    if iteration == total:
-        sys.stdout.write('\n')
-    sys.stdout.flush()
-
 def make_M_from_tqs(t, q, s):
     q = np.quaternion(q[0], q[1], q[2], q[3])
     T = np.eye(4)
@@ -370,10 +346,9 @@ if __name__ == "__main__":
     print("NOTE: Symmetry not handled. You have to take care of it.")
 
     training_data = []
-    total_scenes_num = len(scan_to_test)
+    scenes_left = len(scan_to_test)
     all_annotations = JSONHelper.read("./full_annotations.json")
-    printProgressBar(0, total_scenes_num, prefix = 'Progress:', suffix = 'Complete', length = 50)
-    for i, r in enumerate(all_annotations):
+    for r in all_annotations:
         id_scan = r["id_scan"]
         if id_scan not in scan_to_test:
             print("\nSkip ", id_scan)
@@ -497,9 +472,9 @@ if __name__ == "__main__":
         )
         gen_negative_samples_1(r, params, neg_kind_1_num_to_gen, training_data)
 
-        print("\n****************")
-        print("\nFor ", id_scan)
-        print("\n****************")
+        print("\n********************************")
+        print("For ", id_scan)
+        print("\n********************************")
         print(
             "Generated positive training samples (heatmaps):",
             counter_heatmaps,
@@ -532,8 +507,10 @@ if __name__ == "__main__":
             neg_kind_1_num_to_gen + neg_counter_heatmaps_2,
             " negative samples.",
         )
-        print("\n****************")
-        printProgressBar(i + 1, total_scenes_num, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        print("\n********************************")
+        scenes_left -= 1
+        print("Scenes left:", scenes_left)
+        print("\n********************************")
 
     if parser_results.split_type == "train":
         filename_json = "../../Assets/training-data/trainset.json"
@@ -543,4 +520,4 @@ if __name__ == "__main__":
         filename_json = "../../Assets/training-data/unknownset.json"
 
     JSONHelper.write(filename_json, training_data)
-    print("Training json-file (needed from network) saved in:", filename_json)
+    print("Training json-file (needed from network saved in:", filename_json)
