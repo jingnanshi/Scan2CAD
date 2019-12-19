@@ -99,82 +99,82 @@ def gen_positive_aug_samples(r, params, num_per_cad_to_gen, training_data):
         voxfile_cad = (
             params["shapenet_voxelized"] + "/" + catid_cad + "/" + id_cad + "__0__.df"
         )
+        # basename for saving training data
+        basename_trainingdata = "_".join(
+            [id_scan, "aug", catid_cad, id_cad, str(counter_cads)]
+        )
 
-        # Sample randmly on CAD surface
-        for p_count in range(num_per_cad_to_gen):
+        # sample all keypoints
+        ii = 0
+        kps_cad = []
+        kps_scan = []
+        while True:
+            # sampled_kps_cad: in CAD frame
+            sampled_kps_cad = Keypoints2Grid.get_random_cad_voxel_point(voxfile_cad)
+            sampled_kps_cad = np.array(sampled_kps_cad).reshape(3, -1, order="F")
+            assert sampled_kps_cad.shape[1] == 1
+            sampled_kps_cad = np.vstack((sampled_kps_cad, np.ones((1, 1))))
 
-            # basename for saving training data
-            basename_trainingdata = "_".join(
-                [id_scan, "aug", catid_cad, id_cad, str(counter_cads), str(p_count)]
+            # use GT transform to transform it to world frame
+            temp = np.dot(Mcad, sampled_kps_cad)
+
+            # transform to scan frame
+            sampled_kps_cad_scanframe = np.asfortranarray(
+                np.dot(np.linalg.inv(Mscan), temp)[0:3, :]
             )
 
-            while True:
-                # sampled_kps_cad: in CAD frame
-                sampled_kps_cad = Keypoints2Grid.get_random_cad_voxel_point(voxfile_cad)
-                sampled_kps_cad = np.array(sampled_kps_cad).reshape(3, -1, order="F")
-                assert sampled_kps_cad.shape[1] == 1
-                sampled_kps_cad = np.vstack((sampled_kps_cad, np.ones((1, 1))))
+            # check whether the point is close to scan surface
+            close_to_surface = CropCentered.close_to_surface(
+                sampled_kps_cad_scanframe, voxfile_scan
+            )
+            if close_to_surface:
+                kps_cad.append(sampled_kps_cad)
+                kps_scan.append(sampled_kps_cad_scanframe)
+                ii += 1
+            if ii >= num_per_cad_to_gen:
+                break
 
-                # use GT transform to transform it to world frame
-                temp = np.dot(Mcad, sampled_kps_cad)
+        kps_cad = np.asfortranarray(np.hstack(kps_cad)[0:3,:])
 
-                # transform to scan frame
-                sampled_kps_cad_scanframe = np.asfortranarray(
-                    np.dot(np.linalg.inv(Mscan), temp)[0:3, :]
-                )
+        Keypoints2Grid.project_and_save(
+            1.0,
+            kps_cad,
+            voxfile_cad,
+            params["heatmaps"] + "/" + basename_trainingdata,
+        )
 
-                # check whether the point is close to scan surface
-                close_to_surface = CropCentered.close_to_surface(
-                    sampled_kps_cad_scanframe, voxfile_scan
-                )
+        kps_scan = np.asfortranarray(np.hstack(kps_scan)[0:3,:])
+        assert kps_scan.flags[
+            "F_CONTIGUOUS"
+        ], "Make sure keypoint array is col-major and continuous!"
+        CropCentered.crop_and_save(
+            63,
+            -5 * 0.03,
+            kps_scan,
+            voxfile_scan,
+            params["centers"] + "/" + basename_trainingdata,
+        )
 
-                if close_to_surface:
-                    # save CAD heatmap
-                    kps_cad = np.asfortranarray(sampled_kps_cad[0:3, :])
-                    assert (
-                        kps_cad.flags["F_CONTIGUOUS"] == True
-                    ), "Make sure keypoint array is col-major and continuous!"
-
-                    filename_vox_heatmap = Keypoints2Grid.single_project_and_save(
-                        1.0,
-                        kps_cad,
-                        voxfile_cad,
-                        params["heatmaps"] + "/" + basename_trainingdata,
-                    )
-                    if filename_vox_heatmap is None or len(filename_vox_heatmap) == 0:
-                        print("WARNING: empty vox heatmap file name for", id_cad ,". Skip it.")
-                        break 
-
-                    # save centered crop
-                    kps_scan = sampled_kps_cad_scanframe
-                    assert kps_scan.flags[
-                        "F_CONTIGUOUS"
-                    ], "Make sure keypoint array is col-major and continuous!"
-                    filename_vox_center = CropCentered.single_crop_and_save(
-                        63,
-                        -5 * 0.03,
-                        kps_scan,
-                        voxfile_scan,
-                        params["centers"] + "/" + basename_trainingdata,
-                    )
-                    if filename_vox_center is None or len(filename_vox_center) == 0:
-                        print("WARNING: empty vox heatmap file name. Resample.")
-                        continue
-
-                    # dump to file
-                    scale = model["trs"]["scale"]
-                    p_scan = kps_scan[0:3, 0].tolist()
-                    item = {
-                        "filename_vox_center": filename_vox_center,
-                        "filename_vox_heatmap": filename_vox_heatmap,
-                        "customname": basename_trainingdata,
-                        "p_scan": p_scan,
-                        "scale": scale,
-                        "match": True,
-                    }
-                    training_data.append(item)
-                    counter_heatmaps += 1
-                    break
+        scale = model["trs"]["scale"]
+        n_kps_scan = kps_scan.shape[1]
+        for i in range(n_kps_scan):
+            p_scan = kps_scan[0:3, i].tolist()
+            filename_vox_center = (
+                params["centers"] + "/" + basename_trainingdata + str(i) + ".vox"
+            )
+            filename_vox_heatmap = (
+                params["heatmaps"] + "/" + basename_trainingdata + str(i) + ".vox2"
+            )
+            item = {
+                "filename_vox_center": filename_vox_center,
+                "filename_vox_heatmap": filename_vox_heatmap,
+                "customname": basename_trainingdata + str(i),
+                "p_scan": p_scan,
+                "scale": scale,
+                "match": True,
+            }  # <-- in this demo only positive samples
+            training_data.append(item)
+            counter_heatmaps += 1
         counter_cads += 1
 
     print(
@@ -524,7 +524,7 @@ if __name__ == "__main__":
     params_list = [params]*len(filtered_annotations)
 
     # multiprocessing pools
-    p = multiprocessing.Pool(processes=8)
+    p = multiprocessing.Pool(processes=5)
     data = p.map(worker, zip(filtered_annotations, params_list))
 
     for ele in data:
