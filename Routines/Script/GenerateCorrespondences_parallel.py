@@ -20,11 +20,14 @@ import quaternion
 import os
 import shutil
 import random
-import multiprocessing
 import CSVHelper
 import JSONHelper
 import utils
 import time
+import queue
+from pebble import concurrent
+from pebble import ProcessPool
+from concurrent.futures import TimeoutError
 
 
 def make_M_from_tqs(t, q, s):
@@ -499,6 +502,7 @@ def worker(input_data):
     return training_data
 
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -517,18 +521,41 @@ if __name__ == "__main__":
 
     print("NOTE: Symmetry not handled. You have to take care of it.")
 
+    training_queue = queue.Queue()
     training_data = []
     scenes_left = len(scan_to_test)
     all_annotations = JSONHelper.read("./full_annotations.json")
     filtered_annotations = [r for r in all_annotations if r["id_scan"] in scan_to_test]
     params_list = [params]*len(filtered_annotations)
 
+    def task_done(future):
+        try:
+            result = future.result()  # blocks until results are ready
+            training_queue.put(result)
+        except TimeoutError as error:
+            print("Function took longer than %d seconds" % error.args[1])
+        except Exception as error:
+            print("Function raised %s" % error)
+            print(error.traceback)  # traceback of the function
     # multiprocessing pools
-    p = multiprocessing.Pool(processes=5)
-    data = p.map(worker, zip(filtered_annotations, params_list))
+    #data = []
+    #pool = multiprocessing.Pool(processes=5)
+    #data = pool.map(worker, zip(filtered_annotations, params_list))
+    with ProcessPool(max_workers=5, max_tasks=10) as pool:
+        for i in zip(filtered_annotations, params_list):
+            future = pool.schedule(worker, args=[i], timeout=30)
+            future.add_done_callback(task_done)
 
-    for ele in data:
-        training_data.extend(ele)
+    while True:
+        try:
+            ele = training_queue.get(block=False)
+            training_data.extend(ele)
+        except queue.Empty:
+            break;
+
+    if len(training_data) == 0:
+        print("WRARNING: NO DATA SAVED!")
+        return
 
     if parser_results.split_type == "train":
         filename_json = "../../Assets/training-data/trainset.json"
