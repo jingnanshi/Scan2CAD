@@ -444,7 +444,7 @@ def worker(input_data):
     ###############################################
     ## Positive training data: Data augmentation ##
     ###############################################
-    aug_data_num = int(counter_heatmaps * 10 / counter_cads)
+    aug_data_num = int(counter_heatmaps * 2 / counter_cads)
     aug_counter_cads, aug_counter_heatmaps = gen_positive_aug_samples(
         r, params, aug_data_num, training_data
     )
@@ -536,14 +536,14 @@ if __name__ == "__main__":
             print("Function took longer than %d seconds" % error.args[1])
         except Exception as error:
             print("Function raised %s" % error)
-            print(error.traceback)  # traceback of the function
+
     # multiprocessing pools
     #data = []
     #pool = multiprocessing.Pool(processes=5)
     #data = pool.map(worker, zip(filtered_annotations, params_list))
-    with ProcessPool(max_workers=5, max_tasks=10) as pool:
+    with ProcessPool(max_workers=5) as pool:
         for i in zip(filtered_annotations, params_list):
-            future = pool.schedule(worker, args=[i], timeout=30)
+            future = pool.schedule(worker, args=[i], timeout=300)
             future.add_done_callback(task_done)
 
     while True:
@@ -555,14 +555,14 @@ if __name__ == "__main__":
 
     if len(training_data) == 0:
         print("WRARNING: NO DATA SAVED!")
-        return
-
-    if parser_results.split_type == "train":
-        filename_json = "../../Assets/training-data/trainset.json"
-    elif parser_results.split_type == "val":
-        filename_json = "../../Assets/training-data/valset.json"
+        import pdb; pdb.set_trace()
     else:
-        filename_json = "../../Assets/training-data/unknownset.json"
+        if parser_results.split_type == "train":
+            filename_json = "../../Assets/training-data/trainset.json"
+        elif parser_results.split_type == "val":
+            filename_json = "../../Assets/training-data/valset.json"
+        else:
+            filename_json = "../../Assets/training-data/unknownset.json"
 
-    JSONHelper.write(filename_json, training_data)
-    print("Training json-file (needed from network saved in:", filename_json)
+        JSONHelper.write(filename_json, training_data)
+        print("Training json-file (needed from network saved in:", filename_json)
