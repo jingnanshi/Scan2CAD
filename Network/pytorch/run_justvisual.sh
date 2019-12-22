@@ -11,6 +11,7 @@ command="CUDA_VISIBLE_DEVICES=0
 		--lr 0.001
 		--train_list 	../../Assets/training-data/filtered_trainset.json
 		--val_list 		../../Assets/training-data/filtered_valset.json
+                --just_visualize 1
 		--mask_neg 1
 		--with_scale 1
 		--with_match 1

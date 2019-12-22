@@ -121,7 +121,7 @@ class TrainingWorld:
                 self.save_checkpoint()
                 with torch.no_grad():
                     self.evaluate()
-                    self.visualize()
+                    #self.visualize()
                 self.timing = time.time()
                 model.train()
 
