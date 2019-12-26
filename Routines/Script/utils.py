@@ -4,6 +4,7 @@ import csv
 
 from pathlib import Path
 
+
 def load_scannet_split(dir_path, split_type="val"):
     """
     Load original splits for scannet
@@ -29,16 +30,19 @@ def load_scannet_split(dir_path, split_type="val"):
 
     return split
 
-class S2C_QueryDB:
-    def __init__(self, 
-                 gtpath=os.path.join(str(Path.home()), "code/datasets/scan2cad_gt"),
-                 shapenet_path=os.path.join(str(Path.home()),"code/datasets/ShapeNetCore.v2")):
+
+class S2C_DB:
+    def __init__(
+        self,
+        gtpath=os.path.join(str(Path.home()), "code/datasets/scan2cad_gt"),
+        shapenet_path=os.path.join(str(Path.home()), "code/datasets/ShapeNetCore.v2"),
+    ):
         """
         Helper class for querying scan2cad ground truth annotation data
         """
         # load scan2cad gt data
         self.update_s2c_gt_db(gtpath)
-        
+
     def update_s2c_gt_db(self, gtpath):
         """
         Load/update Scan2CAD ground truth database by reloading json/csv files
@@ -47,9 +51,9 @@ class S2C_QueryDB:
         self.gt_annotation_path = os.path.join(gtpath, "full_annotations.json")
         self.gt_unique_cads_path = os.path.join(gtpath, "unique_cads.csv")
         self.gt_cad_apperances_path = os.path.join(gtpath, "cad_appearances.json")
-        
+
         # load full annotations
-        self.gt_scene2aligned_models= {}
+        self.gt_scene2aligned_models = {}
         self.gt_scene2trs = {}
         with open(self.gt_annotation_path) as json_file:
             data = json.load(json_file)
@@ -57,10 +61,10 @@ class S2C_QueryDB:
                 scene_id = entry["id_scan"]
                 scene_trs = entry["trs"]
                 aligned_models = entry["aligned_models"]
-                
+
                 self.gt_scene2trs[scene_id] = scene_trs
                 self.gt_scene2aligned_models[scene_id] = {}
-                
+
                 for model in aligned_models:
                     model_id = model["id_cad"]
                     model_cat = model["catid_cad"]
@@ -69,36 +73,38 @@ class S2C_QueryDB:
                     model_trs["center"] = model["center"]
                     model_keypoints_scan = model["keypoints_scan"]
                     model_keypoints_cad = model["keypoints_cad"]
-                    
+
                     # a scene might have the same CAD aligned multiple times
                     if model_id not in self.gt_scene2aligned_models[scene_id]:
                         self.gt_scene2aligned_models[scene_id][model_id] = {
                             "catid_cad": model_cat,
                             "sym": model_sym,
-                            "trs": [model_trs]
+                            "trs": [model_trs],
                         }
                     else:
-                        self.gt_scene2aligned_models[scene_id][model_id]["trs"].append(model_trs)
-                    
+                        self.gt_scene2aligned_models[scene_id][model_id]["trs"].append(
+                            model_trs
+                        )
+
         # load unique cads from ground truth csv
         self.gt_unique_cads = set()
         self.gt_cad2synsets = {}
-        self.gt_synset2cads = {} # find cad by synset
+        self.gt_synset2cads = {}  # find cad by synset
         with open(self.gt_unique_cads_path) as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
-                self.gt_unique_cads.add(row['id-cad'])
-                
-                if row['id-cad'] not in self.gt_cad2synsets:
-                    self.gt_cad2synsets[row['id-cad']] = [row['catid-cad']]
+                self.gt_unique_cads.add(row["id-cad"])
+
+                if row["id-cad"] not in self.gt_cad2synsets:
+                    self.gt_cad2synsets[row["id-cad"]] = [row["catid-cad"]]
                 else:
-                    self.gt_cad2synsets[row['id-cad']].append(row['catid-cad'])
-                
-                if row['catid-cad'] not in self.gt_synset2cads:
-                    self.gt_synset2cads[row['catid-cad']] = [row['id-cad']]
+                    self.gt_cad2synsets[row["id-cad"]].append(row["catid-cad"])
+
+                if row["catid-cad"] not in self.gt_synset2cads:
+                    self.gt_synset2cads[row["catid-cad"]] = [row["id-cad"]]
                 else:
-                    self.gt_synset2cads[row['catid-cad']].append(row['id-cad'])
-    
+                    self.gt_synset2cads[row["catid-cad"]].append(row["id-cad"])
+
         # load CADs per scene data
         self.gt_scene2cads = {}
         self.gt_scenes = set()
@@ -110,18 +116,16 @@ class S2C_QueryDB:
                 for cad_id, count in cad_dict.items():
                     self.gt_scene2cads[scene_id].append((cad_id, count))
                 # sort by count
-                self.gt_scene2cads[scene_id].sort(key=lambda x:x[1])
+                self.gt_scene2cads[scene_id].sort(key=lambda x: x[1])
             print("Loaded", len(self.gt_scenes), "scenes with ground truth data.")
-            
-            
-    
+
     def get_gt_aligned_models_by_scene(self, scene):
         """
         Return a list of aligned models of provided scene in Scan2CAD 
         ground truth
         """
         return self.gt_scene2aligned_models[scene]
-    
+
     def get_gt_cad_trs(self, scene, cad_id):
         """
         Return GT CAD model transformation
@@ -135,8 +139,11 @@ class S2C_QueryDB:
         }
         - a symmetry string
         """
-        return self.gt_scene2aligned_models[scene][cad_id]["trs"], self.gt_scene2aligned_models[scene][cad_id]["sym"]
-    
+        return (
+            self.gt_scene2aligned_models[scene][cad_id]["trs"],
+            self.gt_scene2aligned_models[scene][cad_id]["sym"],
+        )
+
     def get_gt_scene_trs(self, scene):
         """
         Return transformation from scan space to world space by scene
@@ -150,13 +157,13 @@ class S2C_QueryDB:
         }
         """
         return self.gt_scene2trs[scene]
-    
+
     def get_gt_scenes(self):
         """
         Return a list of scenes listed in the Scan2CAD ground truth
         """
         return self.gt_scenes
-    
+
     def get_gt_cads_by_scene(self, scene):
         """
         Return a list of CAD models used in one scene
@@ -165,5 +172,43 @@ class S2C_QueryDB:
         synsetid_cadid
         """
         return self.gt_scene2cads[scene]
-    
-   
+
+
+class ScanNet_DB:
+    def __init__(
+        self,
+        path=os.path.join(
+            str(Path.home()), "code/teaserpp-experiments/datasets/scannet"
+        ),
+    ):
+        """
+        This class works with the original scannet v2 dataset
+        """
+        self.data_path = path
+
+    def get_scene_pc_path(self, scene):
+        """
+        Return the path to the _vh_lean_2.ply file of scene
+        """
+        pc_filename = scene + "_vh_clean_2.ply"
+        pc_filepath = os.path.join(self.data_path, "scans", scene, pc_filename)
+        return pc_filepath
+
+    def get_scene_axis_alignment(self, scene):
+        """
+        Return the axis alignment matrix for a given scene
+        """
+        scene_meta_filename = scene + ".txt"
+        scene_meta_filepath = os.path.join(
+            self.data_path, "scans", scene, scene_meta_filename
+        )
+
+        lines = open(scene_meta_filepath).readlines()
+        for line in lines:
+            if "axisAlignment" in line:
+                axis_align_matrix = [
+                    float(x) for x in line.rstrip().strip("axisAlignment = ").split(" ")
+                ]
+                break
+        axis_align_matrix = np.array(axis_align_matrix).reshape((4, 4))
+        return axis_align_matrix
