@@ -11,6 +11,16 @@
 
 namespace py = pybind11;
 
+/**
+ * Helper function to save an empty vox CAD file
+ */
+std::string save_empty_vox_cad(std::string filename_cad, std::string customname_out){
+  Vox vox = load_vox(filename_cad);
+  std::string filename = customname_out + std::string(".vox2");
+  save_vox(filename, vox);
+
+  return filename;
+}
 
 /**
  * Helper function for poject & save one single keypoint
@@ -129,6 +139,7 @@ std::string random_heatmap_and_save(std::string filename_cad, std::string custom
 
 PYBIND11_MODULE(Keypoints2Grid, m) {
   m.def("project_and_save", &project_and_save, "project_and_save function");
+  m.def("save_empty_vox_cad", &save_empty_vox_cad, "save_empty_vox_cad function");
   m.def("single_project_and_save", &single_project_and_save, "single_project_and_save function");
   m.def("random_heatmap_and_save", &random_heatmap_and_save, "random_heatmap_and_save function");
   m.def("get_random_cad_voxel_point", &get_random_cad_voxel_point, "get random voxel point on CAD surface");
