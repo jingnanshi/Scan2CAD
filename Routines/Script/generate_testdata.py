@@ -85,8 +85,7 @@ def load_all_vox_cads(scenes):
 
     return loaded_cads
 
-
-def get_harris_keypoints_for_scene(scene, radius=0.3, nms_threshold=0.001, threads=8):
+def get_harris_keypoints_for_scene(scene, radius=0.1, nms_threshold=0.001, threads=4, visualize=False):
     """
     Get Harris keypoints for a scene
     """
@@ -96,12 +95,27 @@ def get_harris_keypoints_for_scene(scene, radius=0.3, nms_threshold=0.001, threa
     print("Scene path:", scene_path)
     scene_pc = o3d.io.read_point_cloud(scene_path)
     scene_pc_points = np.asarray(scene_pc.points)
+    scene_pc_points = np.asfortranarray(scene_pc_points)
 
     # generate 3D Harris keypoints for each scene
     harris_keypoints = HarrisKeypoints.get_harris_keypoints(
-        scene_pc_points, radius, nms_threshold, threads
+    scene_pc_points, radius, nms_threshold, threads
     )
     print("Harris shape:", harris_keypoints.shape)
+
+    # visualize the points
+    if visualize:
+        spheres_list = []
+        for i in range(harris_keypoints.shape[0]):
+            mesh_sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.05)
+            mesh_sphere.compute_vertex_normals()
+            mesh_sphere.translate(harris_keypoints[i,:])
+            mesh_sphere.paint_uniform_color((0.9,0.1,0.1))
+            spheres_list.append(mesh_sphere)
+        spheres_list.append(scene_pc)
+
+        o3d.visualization.draw_geometries(spheres_list)
+
     return harris_keypoints
 
 
@@ -143,20 +157,21 @@ def worker(scene, params, loaded_cads):
     # 2. for each cat model, iterate through all the scan keypoints
     test_data = []
     gt_scene_cads = s2c_db.get_gt_cads_by_scene(scene)
-    for full_cad_id, count in gt_scene_cads:
 
-        # iterate through all the Harris keypoints & save items
-        for kp_idx in range(harris_keypoints.shape[0]):
+    # iterate through all the Harris keypoints & save items
+    for kp_idx in range(harris_keypoints.shape[0]):
+        for full_cad_id, count in gt_scene_cads:
             scale = [1, 1, 1]
             p_scan = kps_scan[0:3, kp_idx].tolist()
             filename_vox_center = (
                 params["centers"] + "/" + basename + str(kp_idx) + ".vox"
             )
             filename_vox_heatmap = loaded_cads[full_cad_id]
+            custom_name = basename + "_" + full_cad_id
             item = {
                 "filename_vox_center": filename_vox_center,
                 "filename_vox_heatmap": filename_vox_heatmap,
-                "customname": basename,
+                "customname": custom_name,
                 "p_scan": p_scan,
                 "scale": scale,
                 "match": True,
@@ -198,16 +213,12 @@ if __name__ == "__main__":
     all_scenes = utils.load_scannet_split(
         "../../Assets/scannet-metadata/", split_type=parser_results.split_type
     )
+    test_scenes = all_scenes
 
     # Generate test data
     loaded_cads = load_all_vox_cads(all_scenes)
-    worker(all_scenes[10], params, loaded_cads)
-
-    test_scenes = [all_scenes[0]]
-    params_list = [params] * len(test_scenes)
 
     training_queue = queue.Queue()
-
     def task_done(future):
         try:
             result = future.result()  # blocks until results are ready
@@ -218,10 +229,23 @@ if __name__ == "__main__":
             print("Function raised %s" % error)
 
     # multiprocessing pools
-    # data = []
-    # pool = multiprocessing.Pool(processes=5)
-    # data = pool.map(worker, zip(filtered_annotations, params_list))
-    # with ProcessPool(max_workers=5) as pool:
-    #    for i in zip(test_scenes, params_list):
-    #        future = pool.schedule(worker, args=[i], timeout=300)
-    #        future.add_done_callback(task_done)
+    test_data = []
+    with ProcessPool(max_workers=5) as pool:
+       for c_scene in test_scenes:
+           future = pool.schedule(worker, args=[c_scene, params, loaded_cads], timeout=300)
+           future.add_done_callback(task_done)
+
+    while True:
+        try:
+            ele = training_queue.get(block=False)
+            test_data.extend(ele)
+        except queue.Empty:
+            break;
+
+    if len(test_data) == 0:
+        print("WRARNING: NO DATA SAVED!")
+        import pdb; pdb.set_trace()
+    else:
+        filename_json = "../../Assets/training-data/generated_testset.json"
+        JSONHelper.write(filename_json, test_data)
+        print("Val-Test json-file (needed from network saved in:", filename_json)
