@@ -167,7 +167,7 @@ def worker(scene, params, loaded_cads):
                 params["centers"] + "/" + basename + str(kp_idx) + ".vox"
             )
             filename_vox_heatmap = loaded_cads[full_cad_id]
-            custom_name = basename + "_" + full_cad_id
+            custom_name = basename + str(kp_idx) + "_" + full_cad_id
             item = {
                 "filename_vox_center": filename_vox_center,
                 "filename_vox_heatmap": filename_vox_heatmap,
